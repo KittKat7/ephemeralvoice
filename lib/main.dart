@@ -1,14 +1,24 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:kittkatflutterlibrary/kittkatflutterlibrary.dart';
 
+import 'package:record/record.dart';
+import 'package:audioplayers/audioplayers.dart';
+
 import './lang/en_us.dart' as en_us;
 
-void main() {
+
+final record = AudioRecorder();
+final player = AudioPlayer();
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   setLangMap(en_us.en_us);
   AppTheme appTheme = AppTheme();
   Aspect.aspectWidth = 3;
   Aspect.aspectHeight = 4;
+  await record.hasPermission();
   runApp(ThemedWidget(widget: const MyApp(), theme: appTheme));
 }
 
@@ -43,24 +53,141 @@ class MyHomePage extends StatelessWidget {
         child: Aspect(child: Column(
           mainAxisAlignment: .center,
           children: [
-            const Text('You have pushed the button this many times:'),
             Text(
-              '# TODO',
+              getLang('titleApp'),
               style: Theme.of(context).textTheme.headlineMedium,
             ),
-            Row(mainAxisSize: .min, children: [
-              IconButton(onPressed: (){}, icon: Icon(Icons.play_arrow)), // TODO
-            ],)
+            RecordWidget()
           ],
         )),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: (){},
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+        tooltip: getLang('pptHelp'),
+        child: Icon(Icons.help),
       ),
     );
   }
-
 }
 
+enum RecordingStates {
+  stopped,
+  recording,
+  playback,
+}
+
+class RecordWidget extends StatefulWidget {
+  const RecordWidget({super.key});
+
+  @override
+  State<StatefulWidget> createState() => _RecordWidgetState();
+}
+
+class _RecordWidgetState extends State<RecordWidget> {
+  RecordingStates state = RecordingStates.stopped;
+  String? path;
+  Duration duration = Duration();
+  Duration currentDuration = Duration();
+  DateTime _start = DateTime.now();
+  Timer? _timer;
+  String _durationString = "";
+
+  @override
+  initState() {
+    super.initState();
+    player.onDurationChanged.listen((Duration d) {
+      updateDuration(d);
+    });
+    player.onPositionChanged.listen((Duration d) {
+      setState(() => currentDuration = d);
+    });
+    _durationString = getLang('pptDuration', [duration.inMilliseconds]);
+    player.setReleaseMode(.stop);
+  }
+
+  void updateDuration(Duration d) {
+    setState(() {
+      duration = d;
+      _durationString = getLang('pptDuration', [(duration.inMilliseconds / 1000).toStringAsFixed(1)]);
+    });
+  }
+
+  Future<void> startRecord() async {
+    if (state != RecordingStates.stopped) await stopRecord();
+    await record.start(RecordConfig(encoder: .opus), path: "recording");
+
+    _start = DateTime.now();
+
+    _timer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+        updateDuration(DateTime.now().difference(_start));
+    });
+
+    setState(() {
+      state = RecordingStates.recording;
+    });
+  }
+
+  Future<void> stopRecord() async {
+    if (state == RecordingStates.recording) {
+      _timer?.cancel();
+      _timer = null;
+
+      path = await record.stop();
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      setState(() {
+        state = RecordingStates.stopped;
+      });
+    }
+    else if (state == RecordingStates.playback) {
+      await player.stop();
+      setState(() {
+        state = RecordingStates.stopped;
+      });
+    }
+  }
+
+  Future<void> startPlayback() async {
+    if (state != RecordingStates.stopped) await stopRecord();
+    if (state == RecordingStates.playback || path == null) return;
+    await player.play(UrlSource(path!));
+    setState(() {
+      state = RecordingStates.playback;
+    });
+  }
+
+  Future<void> toggleLoop() async {
+    final newMode = player.releaseMode == ReleaseMode.loop
+        ? ReleaseMode.stop
+        : ReleaseMode.loop;
+
+    await player.setReleaseMode(newMode);
+
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: [
+      // Total duration display
+      Text(_durationString),
+      // Progress bar
+      LinearProgressIndicator(value: currentDuration.inMilliseconds / duration.inMilliseconds),
+      // Control buttons
+      Row(mainAxisSize: .min, children: [
+        IconButton(
+          onPressed: () => startRecord(),
+          icon: Icon(state == RecordingStates.recording? Icons.mic: Icons.mic_off_outlined)),
+        IconButton(
+          onPressed: () => stopRecord(),
+          icon: Icon(state == RecordingStates.stopped? Icons.stop_circle: Icons.stop_circle_outlined)),
+        IconButton(
+          onPressed: () => startPlayback(),
+          icon: Icon(state == RecordingStates.playback? Icons.play_arrow: Icons.play_arrow_outlined)), 
+        IconButton(
+          onPressed: toggleLoop,
+          icon: Icon(player.releaseMode == ReleaseMode.loop? Icons.loop: Icons.one_x_mobiledata)), 
+      ]),
+    ]);
+  }
+}
