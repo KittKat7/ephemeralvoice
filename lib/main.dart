@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:kittkatflutterlibrary/kittkatflutterlibrary.dart';
@@ -11,6 +12,8 @@ import './lang/en_us.dart' as en_us;
 
 final record = AudioRecorder();
 final player = AudioPlayer();
+final _numOfDeterminationOptions = 5;
+final random = Random(DateTime.now().millisecondsSinceEpoch);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,16 +56,22 @@ class MyHomePage extends StatelessWidget {
         child: Aspect(child: Column(
           mainAxisAlignment: .center,
           children: [
-            Text(
-              getLang('titleApp'),
-              style: Theme.of(context).textTheme.headlineMedium,
+            GestureDetector(
+              onTap: () {
+                ScaffoldMessenger.of(context).clearSnackBars();
+                ScaffoldMessenger.of(context).showSnackBar(motivationSnack());
+              },
+              child: Text(
+                getLang('titleApp'),
+                style: Theme.of(context).textTheme.headlineMedium,
+              )
             ),
             RecordWidget()
           ],
         )),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: (){},
+        onPressed: () => HelpPopup.show(context),
         tooltip: getLang('pptHelp'),
         child: Icon(Icons.help),
       ),
@@ -190,4 +199,40 @@ class _RecordWidgetState extends State<RecordWidget> {
       ]),
     ]);
   }
+}
+
+class HelpPopup extends StatelessWidget {
+  const HelpPopup({super.key});
+
+  static Future<void> show(BuildContext context) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return HelpPopup();
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Aspect(child: AlertDialog(
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(getLang('btnClose')))
+      ],
+      content: Marked(getLang('txtHelp'))));
+  }
+
+}
+
+SnackBar motivationSnack() {
+  return SnackBar(
+    content: Text(getLang('determination-${random.nextInt(_numOfDeterminationOptions)}')),
+    action: SnackBarAction(
+      label: getLang('btnClose'),
+      onPressed: () {
+        // Some code to undo the change.
+      },
+    )
+  );
 }
