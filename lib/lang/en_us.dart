@@ -30,8 +30,8 @@ No data is collected or saved externally. That's it. No data is collected, and n
 
   // Because some encouragement is useful
   'determination-0': 'Apparently this popup is called a snackbar, making this message a snack? Knowing this fills you with determination (and maybe slightly hungry)!',
-  'determination-1': 'You remember a mountain path with a red berry waiting for you at the top. Thinking of the berry fills you with determination!',
-  'determination-2': 'Imagine the Beast in you is like a truck, reving its engine, ready for a race. Feeling this energy fills you with determination!',
+  'determination-1': 'You remember a mountain path with a red strawberry waiting for you at the top. Thinking of the strawberry fills you with determination!',
+  'determination-2': 'Imagine the Beast in you is like a truck, revving its engine, ready for a race. Feeling this energy fills you with determination!',
   'determination-3': 'As the shining sun sets, the sky is filled with a golden glow. Knowing the sun will rise up again tomorrow fills you with determination!',
   'determination-4': 'Shattered glass, fused together leaving scars behind. As the sun shines through the stained class window and you see its beauty, you are filled with determination!',
 };
