@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:kittkatflutterlibrary/kittkatflutterlibrary.dart';
 
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import './lang/en_us.dart' as en_us;
 
@@ -15,14 +17,70 @@ final player = AudioPlayer();
 final _numOfDeterminationOptions = 5;
 final random = Random(DateTime.now().millisecondsSinceEpoch);
 
+late final SharedPreferences prefs;
+final Map<String, dynamic> defaultSettings = {
+  'theme': 'red',
+  'mode': 'auto',
+  'loop': false
+};
+Map<String, dynamic> settings = {};
+late final AppTheme appTheme;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   setLangMap(en_us.en_us);
-  AppTheme appTheme = AppTheme();
+  appTheme = AppTheme();
   Aspect.aspectWidth = 3;
   Aspect.aspectHeight = 4;
+  await loadSettings();
+  setColor(getSetting('theme'), false);
   await record.hasPermission();
   runApp(ThemedWidget(widget: const MyApp(), theme: appTheme));
+}
+
+Future<void> loadSettings() async {
+  prefs = await SharedPreferences.getInstance();
+  String? settingsJson = prefs.getString('settings');
+  if (settingsJson != null) {
+    settings = jsonDecode(settingsJson);
+  } else {
+    settings = defaultSettings;
+  }
+}
+
+void saveSettings() {
+  prefs.setString('settings', jsonEncode(settings));
+}
+
+void setSetting(String key, dynamic value) {
+  if (!settings.containsKey(key)) return;
+  settings[key] = value;
+  saveSettings();
+}
+
+dynamic getSetting(String key) {
+  return settings[key]??defaultSettings[key];
+}
+
+void setColor(String color, [bool updateSettings = true]) {
+  Color c;
+  switch(color) {
+    case 'ora':
+      c = Colors.orange;
+    case 'yel':
+      c = Colors.yellow;
+    case 'gre':
+      c = Colors.green;
+    case 'blu':
+      c = Colors.blue;
+    case 'pur':
+      c = Colors.purple;
+    default:
+      c = Colors.red;
+      color = 'red';
+  }
+  appTheme.setColor(c);
+  if (updateSettings) setSetting('theme', color);
 }
 
 class MyApp extends StatelessWidget {
@@ -111,7 +169,7 @@ class _RecordWidgetState extends State<RecordWidget> {
       setState(() => currentDuration = d);
     });
     _durationString = getLang('pptDuration', [duration.inMilliseconds]);
-    player.setReleaseMode(.stop);
+    player.setReleaseMode(getSetting('loop') ? .loop : .stop);
   }
 
   void updateDuration(Duration d) {
@@ -169,6 +227,8 @@ class _RecordWidgetState extends State<RecordWidget> {
     final newMode = player.releaseMode == ReleaseMode.loop
         ? ReleaseMode.stop
         : ReleaseMode.loop;
+
+    setSetting('loop', newMode == ReleaseMode.loop);
 
     await player.setReleaseMode(newMode);
 
@@ -236,3 +296,4 @@ SnackBar motivationSnack() {
     )
   );
 }
+
