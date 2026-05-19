@@ -6,6 +6,8 @@ const Map<String, String> en_us = {
   'pptDuration': 'Duration: \${0} seconds',
 
   'btnClose': 'Close',
+  'btnSettingsTheme': 'Color Theme: \${0}',
+  'btnSettingsMode': 'Theme Mode: \${0}',
 
   'txtHelp': '''
 ## About

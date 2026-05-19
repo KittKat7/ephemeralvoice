@@ -34,6 +34,7 @@ void main() async {
   Aspect.aspectHeight = 4;
   await loadSettings();
   setColor(getSetting('theme'), false);
+  setMode(getSetting('mode'), false);
   await record.hasPermission();
   runApp(ThemedWidget(widget: const MyApp(), theme: appTheme));
 }
@@ -83,6 +84,56 @@ void setColor(String color, [bool updateSettings = true]) {
   if (updateSettings) setSetting('theme', color);
 }
 
+void cycleColor() {
+  String color = getSetting('theme');
+  switch(color) {
+    case 'red':
+      color = 'ora';
+    case 'ora':
+      color = 'yel';
+    case 'yel':
+      color = 'gre';
+    case 'gre':
+      color = 'blu';
+    case 'blu':
+      color = 'pur';
+    case 'pur':
+      color = 'red';
+    default:
+      color = 'red';
+  }
+  setColor(color);
+}
+
+void setMode(String mode, [bool updateSettings = true]) {
+  switch(mode) {
+    case 'light':
+      appTheme.setLightMode();
+      if (updateSettings) setSetting('mode', 'light');
+    case 'dark':
+      appTheme.setDarkMode();
+      if (updateSettings) setSetting('mode', 'dark');
+    default:
+      appTheme.setSystemMode();
+      if (updateSettings) setSetting('mode', 'auto');
+  }
+}
+
+void cycleMode() {
+  String mode = getSetting('mode');
+  switch(mode) {
+    case 'auto':
+      mode = 'light';
+    case 'light':
+      mode = 'dark';
+    case 'dark':
+      mode = 'auto';
+    default:
+      mode = 'auto';
+  }
+  setMode(mode);
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -107,6 +158,10 @@ class MyHomePage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+        actions: [
+          IconButton(onPressed: () => SettingsPopup.show(context), icon: Icon(Icons.settings))
+        ],
+        centerTitle: true,
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(getLang("titleApp")),
       ),
@@ -283,6 +338,38 @@ class HelpPopup extends StatelessWidget {
       content: SingleChildScrollView(child: Marked(getLang('txtHelp')))));
   }
 
+}
+
+class SettingsPopup extends StatefulWidget {
+  const SettingsPopup({super.key});
+
+  static Future<void> show(BuildContext context) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return SettingsPopup();
+      },
+    );
+  }
+  
+  @override
+  State<StatefulWidget> createState() => _SettingsPupopState();
+}
+
+class _SettingsPupopState extends State<SettingsPopup> {
+  @override
+  Widget build(BuildContext context) {
+    return Aspect(child: AlertDialog(
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(getLang('btnClose')))
+      ],
+      content: Column(mainAxisSize: .min, children: [
+        Row(children: [
+          Expanded(child: ElevatedButton(onPressed: () => setState(() => cycleColor()), child: Text(getLang('btnSettingsTheme', [getSetting('theme')]))))]),
+        Row(children: [Expanded(child: ElevatedButton(onPressed: () => setState(() => cycleMode()), child: Text(getLang('btnSettingsMode', [getSetting('mode')]))))])
+      ])));
+  }
 }
 
 SnackBar motivationSnack() {
