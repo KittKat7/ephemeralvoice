@@ -3,6 +3,7 @@ const Map<String, String> en_us = {
   'titleApp': 'Ephemeral Voice',
   'hdrSettings': 'Settings',
   'hdrHelp': 'Help',
+  'hdrMicDisabled': 'Mic Disabled',
 
   'pptHelp': 'Help',
   'pptDuration': 'Duration: \${0} seconds',
@@ -22,6 +23,10 @@ const Map<String, String> en_us = {
   'btnSettingsMode-M1': 'Light',
   'btnSettingsMode-M2': 'Dark',
 
+  'txtMicDisabled': '''
+Hey! Your microphone is currently disabled. You need to allow this website/app permission to use your microphone.
+This app will not work without this permission (becuase its a recording app). If you are concearned about data collection, please read the privacy policy -- spoiler: we don't collect any data.
+''',
   'txtHelp': '''
 ## About
 

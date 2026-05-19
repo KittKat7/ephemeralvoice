@@ -40,7 +40,6 @@ void main() async {
   await loadSettings();
   setColor(ThemeColors.values[getSetting('theme')], false);
   setMode(ThemeModes.values[getSetting('mode')], false);
-  await record.hasPermission();
   runApp(ThemedWidget(widget: const MyApp(), theme: appTheme));
 }
 
@@ -242,6 +241,11 @@ class _RecordWidgetState extends State<RecordWidget> {
 
   Future<void> startRecord() async {
     if (state != RecordingStates.stopped) await stopRecord();
+    if (!(await record.hasPermission())) {
+      MicPopup.show(context);
+      return;
+    }
+  
     await record.start(RecordConfig(encoder: .opus), path: "recording");
 
     _start = DateTime.now();
@@ -322,6 +326,30 @@ class _RecordWidgetState extends State<RecordWidget> {
   }
 }
 
+class MicPopup extends StatelessWidget {
+  const MicPopup({super.key});
+
+  static Future<void> show(BuildContext context) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return MicPopup();
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Aspect(child: AlertDialog(
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(getLang('btnClose')))
+      ],
+      title: Text(getLang('hdrMicDisabled')),
+      content: SingleChildScrollView(child: Marked(getLang('txtMicDisabled')))));
+  }
+}
+
 class HelpPopup extends StatelessWidget {
   const HelpPopup({super.key});
 
@@ -344,7 +372,6 @@ class HelpPopup extends StatelessWidget {
       title: Text(getLang('hdrHelp')),
       content: SingleChildScrollView(child: Marked(getLang('txtHelp')))));
   }
-
 }
 
 class SettingsPopup extends StatefulWidget {
