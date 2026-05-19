@@ -19,9 +19,14 @@ final random = Random(DateTime.now().millisecondsSinceEpoch);
 
 late final SharedPreferences prefs;
 final Map<String, dynamic> defaultSettings = {
-  'theme': 'red',
-  'mode': 'auto',
+  'theme': 0,
+  'mode': 0,
   'loop': false
+};
+final Map<String, Type> settingsTypes = {
+  'theme': int,
+  'mode': int,
+  'loop': bool,
 };
 Map<String, dynamic> settings = {};
 late final AppTheme appTheme;
@@ -33,8 +38,8 @@ void main() async {
   Aspect.aspectWidth = 3;
   Aspect.aspectHeight = 4;
   await loadSettings();
-  setColor(getSetting('theme'), false);
-  setMode(getSetting('mode'), false);
+  setColor(ThemeColors.values[getSetting('theme')], false);
+  setMode(ThemeModes.values[getSetting('mode')], false);
   await record.hasPermission();
   runApp(ThemedWidget(widget: const MyApp(), theme: appTheme));
 }
@@ -47,6 +52,11 @@ Future<void> loadSettings() async {
   } else {
     settings = defaultSettings;
   }
+  for (String k in defaultSettings.keys) {
+    if (!settings.containsKey(k) || settings[k].runtimeType != settingsTypes[k]) {
+      settings[k] = defaultSettings[k];
+    }
+  }
 }
 
 void saveSettings() {
@@ -54,84 +64,80 @@ void saveSettings() {
 }
 
 void setSetting(String key, dynamic value) {
-  if (!settings.containsKey(key)) return;
-  settings[key] = value;
+  if (!defaultSettings.containsKey(key)) return;
+  if (value.runtimeType != settingsTypes[key]) {
+    settings[key] = defaultSettings[key];
+  } else {
+    settings[key] = value;
+  }
   saveSettings();
 }
 
 dynamic getSetting(String key) {
-  return settings[key]??defaultSettings[key];
+  if (defaultSettings.containsKey(key) && settings[key].runtimeType == settingsTypes[key]) {
+    return settings[key];
+  }
+  return defaultSettings[key];
 }
 
-void setColor(String color, [bool updateSettings = true]) {
+enum ThemeColors {
+  red,
+  orange,
+  yellow,
+  green,
+  blue,
+  purple
+}
+
+enum ThemeModes {
+  auto,
+  light,
+  dark
+}
+
+void setColor(ThemeColors color, [bool updateSettings = true]) {
   Color c;
   switch(color) {
-    case 'ora':
+    case ThemeColors.orange:
       c = Colors.orange;
-    case 'yel':
+    case ThemeColors.yellow:
       c = Colors.yellow;
-    case 'gre':
+    case ThemeColors.green:
       c = Colors.green;
-    case 'blu':
+    case ThemeColors.blue:
       c = Colors.blue;
-    case 'pur':
+    case ThemeColors.purple:
       c = Colors.purple;
     default:
       c = Colors.red;
-      color = 'red';
+      color = ThemeColors.red;
   }
   appTheme.setColor(c);
-  if (updateSettings) setSetting('theme', color);
+  if (updateSettings) setSetting('theme', color.index);
 }
 
 void cycleColor() {
-  String color = getSetting('theme');
-  switch(color) {
-    case 'red':
-      color = 'ora';
-    case 'ora':
-      color = 'yel';
-    case 'yel':
-      color = 'gre';
-    case 'gre':
-      color = 'blu';
-    case 'blu':
-      color = 'pur';
-    case 'pur':
-      color = 'red';
-    default:
-      color = 'red';
-  }
-  setColor(color);
+  int color = getSetting('theme');
+  color = (color + 1) % ThemeColors.values.length;
+  setColor(ThemeColors.values[color]);
 }
 
-void setMode(String mode, [bool updateSettings = true]) {
+void setMode(ThemeModes mode, [bool updateSettings = true]) {
   switch(mode) {
-    case 'light':
+    case ThemeModes.light:
       appTheme.setLightMode();
-      if (updateSettings) setSetting('mode', 'light');
-    case 'dark':
+    case ThemeModes.dark:
       appTheme.setDarkMode();
-      if (updateSettings) setSetting('mode', 'dark');
     default:
       appTheme.setSystemMode();
-      if (updateSettings) setSetting('mode', 'auto');
   }
+  if (updateSettings) setSetting('mode', mode.index);
 }
 
 void cycleMode() {
-  String mode = getSetting('mode');
-  switch(mode) {
-    case 'auto':
-      mode = 'light';
-    case 'light':
-      mode = 'dark';
-    case 'dark':
-      mode = 'auto';
-    default:
-      mode = 'auto';
-  }
-  setMode(mode);
+  int mode = getSetting('mode');
+  mode = (mode + 1) % ThemeModes.values.length;
+  setMode(ThemeModes.values[mode]);
 }
 
 class MyApp extends StatelessWidget {
@@ -335,6 +341,7 @@ class HelpPopup extends StatelessWidget {
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text(getLang('btnClose')))
       ],
+      title: Text(getLang('hdrHelp')),
       content: SingleChildScrollView(child: Marked(getLang('txtHelp')))));
   }
 
@@ -364,10 +371,11 @@ class _SettingsPupopState extends State<SettingsPopup> {
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text(getLang('btnClose')))
       ],
+      title: Text(getLang('hdrSettings')),
       content: Column(mainAxisSize: .min, children: [
         Row(children: [
-          Expanded(child: ElevatedButton(onPressed: () => setState(() => cycleColor()), child: Text(getLang('btnSettingsTheme', [getSetting('theme')]))))]),
-        Row(children: [Expanded(child: ElevatedButton(onPressed: () => setState(() => cycleMode()), child: Text(getLang('btnSettingsMode', [getSetting('mode')]))))])
+          Expanded(child: ElevatedButton(onPressed: () => setState(() => cycleColor()), child: Text(getLang('btnSettingsTheme', [getLang('btnSettingsTheme-C${getSetting('theme')}')]))))]),
+        Row(children: [Expanded(child: ElevatedButton(onPressed: () => setState(() => cycleMode()), child: Text(getLang('btnSettingsMode', [getLang('btnSettingsMode-M${getSetting('mode')}')]))))])
       ])));
   }
 }

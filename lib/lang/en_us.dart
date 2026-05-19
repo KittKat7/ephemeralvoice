@@ -1,6 +1,8 @@
 // ignore: constant_identifier_names
 const Map<String, String> en_us = {
   'titleApp': 'Ephemeral Voice',
+  'hdrSettings': 'Settings',
+  'hdrHelp': 'Help',
 
   'pptHelp': 'Help',
   'pptDuration': 'Duration: \${0} seconds',
@@ -8,6 +10,17 @@ const Map<String, String> en_us = {
   'btnClose': 'Close',
   'btnSettingsTheme': 'Color Theme: \${0}',
   'btnSettingsMode': 'Theme Mode: \${0}',
+
+  'btnSettingsTheme-C0': 'Red',
+  'btnSettingsTheme-C1': 'Orange',
+  'btnSettingsTheme-C2': 'Yellow',
+  'btnSettingsTheme-C3': 'Green',
+  'btnSettingsTheme-C4': 'Blue',
+  'btnSettingsTheme-C5': 'Purple',
+
+  'btnSettingsMode-M0': 'System',
+  'btnSettingsMode-M1': 'Light',
+  'btnSettingsMode-M2': 'Dark',
 
   'txtHelp': '''
 ## About
