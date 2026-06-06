@@ -1,58 +1,105 @@
+// Dart imports
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
-
+// Flutter imports
 import 'package:flutter/material.dart';
+// Package imports
 import 'package:kittkatflutterlibrary/kittkatflutterlibrary.dart';
-
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
-
-
+// Local imports
 import './lang/en_us.dart' as en_us;
 
-
+// GLOBAL FINAL VARIABLES
+/// The AudioRecorder instance.
 final record = AudioRecorder();
+/// The AudioPlayer instance.
 final player = AudioPlayer();
+/// How many motivational quotes are there.
 final _numOfDeterminationOptions = 5;
+/// The Random instance, used for accessing determination messages.
 final random = Random(DateTime.now().millisecondsSinceEpoch);
-
+/// The SharedPreferences instance.
 late final SharedPreferences prefs;
+
+// APP SETTINGS
+/// Default settings.
 final Map<String, dynamic> defaultSettings = {
   'theme': 0,
   'mode': 0,
   'loop': false
 };
+/// The types for all settings.
 final Map<String, Type> settingsTypes = {
   'theme': int,
   'mode': int,
   'loop': bool,
 };
+/// The settings map used by the app.
 Map<String, dynamic> settings = {};
+/// The AppTheme instance.
 late final AppTheme appTheme;
 
+// ENUMS
+/// The list of available theme colors for the app.
+enum ThemeColors {
+  red,
+  orange,
+  yellow,
+  green,
+  blue,
+  purple
+}
+/// List of available theme modes for the app.
+enum ThemeModes {
+  auto,
+  light,
+  dark
+}
+/// The recording states for the app.
+enum RecordingStates {
+  idle,
+  recording,
+  playback,
+}
+
+// Functions
+/// Main method, runs things :D
 void main() async {
+  // Initiate flutter bindings
   WidgetsFlutterBinding.ensureInitialized();
-  setLangMap(en_us.en_us);
-  appTheme = AppTheme();
+  // Set the aspect ratio
   Aspect.aspectWidth = 3;
   Aspect.aspectHeight = 4;
+  // Load app settings
   await loadSettings();
+  // Set the app language
+  setLangMap(en_us.en_us);
+  // Set the app theming settings
+  appTheme = AppTheme();
   setColor(ThemeColors.values[getSetting('theme')], false);
   setMode(ThemeModes.values[getSetting('mode')], false);
+  // Run the app!
   runApp(ThemedWidget(widget: const MyApp(), theme: appTheme));
 }
 
+/// Loads the settings from SharedPreferences. These loaded settings are placed
+/// into the [settings] instance.
 Future<void> loadSettings() async {
+  // Access the preferences and get the json string
   prefs = await SharedPreferences.getInstance();
   String? settingsJson = prefs.getString('settings');
+  // If there are settings, load them, otherwise, load defaults.
   if (settingsJson != null) {
     settings = jsonDecode(settingsJson);
   } else {
     settings = defaultSettings;
   }
+  // Go through all the loaded settings and check the type. If the type is
+  // wrong, load the default instead.
   for (String k in defaultSettings.keys) {
     if (!settings.containsKey(k) || settings[k].runtimeType != settingsTypes[k]) {
       settings[k] = defaultSettings[k];
@@ -60,10 +107,13 @@ Future<void> loadSettings() async {
   }
 }
 
+/// Save app settings to preferences.
 void saveSettings() {
   prefs.setString('settings', jsonEncode(settings));
 }
 
+/// Set a specific setting, and check its type. If the type is wrong, use the
+/// default. Once the settings have been updated, save them.
 void setSetting(String key, dynamic value) {
   if (!defaultSettings.containsKey(key)) return;
   if (value.runtimeType != settingsTypes[key]) {
@@ -74,6 +124,9 @@ void setSetting(String key, dynamic value) {
   saveSettings();
 }
 
+/// Get a specific setting, if the setting is present and has the correct type,
+/// return it, otherwise, return the default setting, or null if it does not
+/// exist.
 dynamic getSetting(String key) {
   if (defaultSettings.containsKey(key) && settings[key].runtimeType == settingsTypes[key]) {
     return settings[key];
@@ -81,21 +134,7 @@ dynamic getSetting(String key) {
   return defaultSettings[key];
 }
 
-enum ThemeColors {
-  red,
-  orange,
-  yellow,
-  green,
-  blue,
-  purple
-}
-
-enum ThemeModes {
-  auto,
-  light,
-  dark
-}
-
+/// Set the app theme color.
 void setColor(ThemeColors color, [bool updateSettings = true]) {
   Color c;
   switch(color) {
@@ -117,12 +156,14 @@ void setColor(ThemeColors color, [bool updateSettings = true]) {
   if (updateSettings) setSetting('theme', color.index);
 }
 
+/// Cycle the app theme color to the next available color.
 void cycleColor() {
   int color = getSetting('theme');
   color = (color + 1) % ThemeColors.values.length;
   setColor(ThemeColors.values[color]);
 }
 
+/// Set the app theme mode.
 void setMode(ThemeModes mode, [bool updateSettings = true]) {
   switch(mode) {
     case ThemeModes.light:
@@ -135,12 +176,14 @@ void setMode(ThemeModes mode, [bool updateSettings = true]) {
   if (updateSettings) setSetting('mode', mode.index);
 }
 
+/// Cycle the app theme mode.
 void cycleMode() {
   int mode = getSetting('mode');
   mode = (mode + 1) % ThemeModes.values.length;
   setMode(ThemeModes.values[mode]);
 }
 
+/// The actual app class.
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -157,6 +200,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
+/// The home page widget.
 class MyHomePage extends StatelessWidget {
   const MyHomePage({super.key});
 
@@ -199,20 +243,16 @@ class MyHomePage extends StatelessWidget {
   }
 }
 
-enum RecordingStates {
-  idle,
-  recording,
-  playback,
-}
-
+/// The recording widget - Really, the main widget for the app.
 class RecordWidget extends StatefulWidget {
   const RecordWidget({super.key});
 
   @override
   State<StatefulWidget> createState() => _RecordWidgetState();
 }
-
+/// State for the recording widget.
 class _RecordWidgetState extends State<RecordWidget> {
+  // Recording state variables
   RecordingStates state = RecordingStates.idle;
   String? path;
   Duration duration = Duration();
@@ -221,6 +261,7 @@ class _RecordWidgetState extends State<RecordWidget> {
   Timer? _timer;
   String _durationString = "";
 
+  // Initializing the state
   @override
   initState() {
     super.initState();
@@ -234,6 +275,7 @@ class _RecordWidgetState extends State<RecordWidget> {
     player.setReleaseMode(getSetting('loop') ? .loop : .stop);
   }
 
+  /// Updates the duration for the recording and refresh the state
   void updateDuration(Duration d) {
     setState(() {
       duration = d;
@@ -241,6 +283,7 @@ class _RecordWidgetState extends State<RecordWidget> {
     });
   }
 
+  /// Starts recording
   Future<void> startRecord() async {
     if (state != RecordingStates.idle) await stopRecord();
     if (!(await record.hasPermission())) {
@@ -262,6 +305,7 @@ class _RecordWidgetState extends State<RecordWidget> {
     });
   }
 
+  /// Stops the recording or playback
   Future<void> stopRecord() async {
     if (state == RecordingStates.recording) {
       _timer?.cancel();
@@ -284,6 +328,7 @@ class _RecordWidgetState extends State<RecordWidget> {
     }
   }
 
+  /// Start playback
   Future<void> startPlayback() async {
     if (state != RecordingStates.idle) await stopRecord();
     if (state == RecordingStates.playback || path == null) return;
@@ -294,6 +339,7 @@ class _RecordWidgetState extends State<RecordWidget> {
     });
   }
 
+  /// Toggle between looping or play once.
   Future<void> toggleLoop() async {
     final newMode = player.releaseMode == ReleaseMode.loop
         ? ReleaseMode.stop
@@ -306,6 +352,7 @@ class _RecordWidgetState extends State<RecordWidget> {
     setState(() {});
   }
 
+  // Build the widget
   @override
   Widget build(BuildContext context) {
     return Column(children: [
@@ -332,6 +379,7 @@ class _RecordWidgetState extends State<RecordWidget> {
   }
 }
 
+/// A popup that is shown when mic permissions are disabled.
 class MicPopup extends StatelessWidget {
   const MicPopup({super.key});
 
@@ -356,6 +404,7 @@ class MicPopup extends StatelessWidget {
   }
 }
 
+/// A help popup to tell you helpfull stuff.
 class HelpPopup extends StatelessWidget {
   const HelpPopup({super.key});
 
@@ -380,6 +429,7 @@ class HelpPopup extends StatelessWidget {
   }
 }
 
+/// A popup to allow you to change settings.
 class SettingsPopup extends StatefulWidget {
   const SettingsPopup({super.key});
 
@@ -396,7 +446,7 @@ class SettingsPopup extends StatefulWidget {
   @override
   State<StatefulWidget> createState() => _SettingsPupopState();
 }
-
+/// The state for the settings popup.
 class _SettingsPupopState extends State<SettingsPopup> {
   @override
   Widget build(BuildContext context) {
@@ -413,6 +463,7 @@ class _SettingsPupopState extends State<SettingsPopup> {
   }
 }
 
+/// A snack to keep you motivated!
 SnackBar motivationSnack() {
   return SnackBar(
     content: Text(getLang('determination-${random.nextInt(_numOfDeterminationOptions)}')),
