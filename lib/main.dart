@@ -8,6 +8,8 @@ import 'package:kittkatflutterlibrary/kittkatflutterlibrary.dart';
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+
 
 import './lang/en_us.dart' as en_us;
 
@@ -198,7 +200,7 @@ class MyHomePage extends StatelessWidget {
 }
 
 enum RecordingStates {
-  stopped,
+  idle,
   recording,
   playback,
 }
@@ -211,7 +213,7 @@ class RecordWidget extends StatefulWidget {
 }
 
 class _RecordWidgetState extends State<RecordWidget> {
-  RecordingStates state = RecordingStates.stopped;
+  RecordingStates state = RecordingStates.idle;
   String? path;
   Duration duration = Duration();
   Duration currentDuration = Duration();
@@ -240,7 +242,7 @@ class _RecordWidgetState extends State<RecordWidget> {
   }
 
   Future<void> startRecord() async {
-    if (state != RecordingStates.stopped) await stopRecord();
+    if (state != RecordingStates.idle) await stopRecord();
     if (!(await record.hasPermission())) {
       MicPopup.show(context);
       return;
@@ -254,6 +256,7 @@ class _RecordWidgetState extends State<RecordWidget> {
         updateDuration(DateTime.now().difference(_start));
     });
 
+    WakelockPlus.enable();
     setState(() {
       state = RecordingStates.recording;
     });
@@ -267,22 +270,25 @@ class _RecordWidgetState extends State<RecordWidget> {
       path = await record.stop();
       await Future.delayed(const Duration(milliseconds: 200));
 
+      WakelockPlus.disable();
       setState(() {
-        state = RecordingStates.stopped;
+        state = RecordingStates.idle;
       });
     }
     else if (state == RecordingStates.playback) {
       await player.stop();
+      WakelockPlus.disable();
       setState(() {
-        state = RecordingStates.stopped;
+        state = RecordingStates.idle;
       });
     }
   }
 
   Future<void> startPlayback() async {
-    if (state != RecordingStates.stopped) await stopRecord();
+    if (state != RecordingStates.idle) await stopRecord();
     if (state == RecordingStates.playback || path == null) return;
     await player.play(UrlSource(path!));
+    WakelockPlus.enable();
     setState(() {
       state = RecordingStates.playback;
     });
@@ -314,7 +320,7 @@ class _RecordWidgetState extends State<RecordWidget> {
           icon: Icon(state == RecordingStates.recording? Icons.mic: Icons.mic_off_outlined)),
         IconButton(
           onPressed: () => stopRecord(),
-          icon: Icon(state == RecordingStates.stopped? Icons.stop_circle: Icons.stop_circle_outlined)),
+          icon: Icon(state == RecordingStates.idle? Icons.stop_circle: Icons.stop_circle_outlined)),
         IconButton(
           onPressed: () => startPlayback(),
           icon: Icon(state == RecordingStates.playback? Icons.play_arrow: Icons.play_arrow_outlined)), 
